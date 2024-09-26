@@ -1,9 +1,19 @@
-resource "aws_iam_user" "lambda-service-user" {
-  name = "lambda-service-user"
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "4.52.0"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = "3.4.3"
+    }
+  }
+  required_version = ">= 1.1.0"
 }
 
-resource "aws_iam_access_key" "lambda-service-user" {
-  user = aws_iam_user.lambda-service-user.name
+provider "aws" {
+  region = "us-east-2"
 }
 
 resource aws_iam_policy this {
@@ -35,13 +45,4 @@ resource aws_iam_policy this {
 resource "aws_iam_user_policy_attachment" "lambda-service-user-policy-attachment" {
   user       = aws_iam_user.lambda-service-user.name
   policy_arn = aws_iam_policy.this.arn
-}
-
-output "aws_access_key_id" {
-  value = aws_iam_access_key.lambda-service-user.id
-}
-
-output "aws_secret_access_key" {
-  value     = aws_iam_access_key.lambda-service-user.secret
-  sensitive = true
 }
