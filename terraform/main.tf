@@ -73,10 +73,6 @@ module "eventbridge" {
       }
     ]
   }
-
-  tags = {
-    Name = "${random_pet.this.id}-bus"
-  }
 }
 
 

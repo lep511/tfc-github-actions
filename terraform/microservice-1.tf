@@ -22,9 +22,4 @@ resource "aws_dynamodb_table" "basic-dynamodb-table" {
     name = "SourceItemID"
     type = "S"
   }
-  tags = {
-    "Name"        = "dynamodb-table-1"
-    "Environment" = "production"
-    "Project"     = "${var.default_tags.project}"
-  }
 }
