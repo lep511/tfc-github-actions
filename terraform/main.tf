@@ -14,7 +14,8 @@ terraform {
 provider "aws" {
   region = var.region
   default_tags {
-    tags = var.default_tags
+    tags = "${merge(var.default_tags, aws_servicecatalogappregistry_application.terraform_app.application_tag)}"
+    #tags = var.default_tags
   }
   
   # Make it faster by skipping something
