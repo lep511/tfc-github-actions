@@ -1,3 +1,8 @@
+variable "application_name" {
+  type        = string
+  description = "The name of the application"
+  default     = "TerraformApp"
+}
 variable "region" {
   type        = string
   description = "The region to deploy resources to"
