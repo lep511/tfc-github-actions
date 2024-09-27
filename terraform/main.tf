@@ -13,8 +13,9 @@ terraform {
 # Configure the AWS Provider
 provider "aws" {
   region = var.region
+  alias = "application"
   default_tags {
-    tags = var.default_tags
+    tags = aws_servicecatalogappregistry_application.terraform_app.application_tag
   }
   
   # Make it faster by skipping something
@@ -64,6 +65,14 @@ module "eventbridge" {
 ##################
 # Extra resources
 ##################
+
+# Register new application
+# An AWS Service Catalog AppRegistry Application is displayed in the AWS Console under "MyApplications".
+resource "aws_servicecatalogappregistry_application" "terraform_app" {
+  provider    = aws.application
+  name        = "TerraformApp"
+  description = "New sample terraform application"
+}
 
 resource "random_pet" "this" {
   length = 2
