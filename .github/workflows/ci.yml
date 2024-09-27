@@ -32,17 +32,35 @@ jobs:
       artifacts: ${{ needs.build.outputs.artifacts }}
 
     steps:
-      - uses: goto-bus-stop/setup-zig@v2
+      - name: Configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION }}
 
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Install Rust
+      #- name: Install Rust toolchain
+      #  uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
 
+      - name: Install Zig toolchain
+        uses: korandoru/setup-zig@v1
+        with:
+          # Note: make sure you are using a recent version of zig: https://ziglang.org/download/
+          zig-version: 0.14.0
       - name: Install Cargo Lambda
-        run: cargo install cargo-lambda
-        working-directory: lambda-api
+        uses: jaxxstorm/action-install-gh-release@v1.9.0
+        with:
+          repo: cargo-lambda/cargo-lambda
+          # Note: make sure you are using a recent version of cargo-lambda: https://github.com/cargo-lambda/cargo-lambda/releases
+          tag: v1.4.0 # Remove this if you want to grab always the latest version
+          platform: linux # Other valid options: 'windows' or 'darwin'
+          arch: x86_64 # Valid options for linux: x86_64 or aarch64
 
       - name: Cache Cargo Dependencies
         uses: actions/cache@v4
@@ -52,14 +70,13 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('lambda-api/Cargo.lock') }}
 
       - name: Build Lambda Project
-        run: cargo lambda build --release --arm64 --output-format zip
+        #run: cargo lambda build --release --arm64 --output-format zip
+        run: cargo lambda build --release --output-format zip
         working-directory: lambda-api
 
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: lambda-zip
-          path: lambda-api/target/lambda/lambda-api/bootstrap.zip
+      - name: Deploy Lambda Project
+        run: cargo lambda deploy
+        working-directory: lambda-api
 
   deploy:
     name: Deploy to AWS
@@ -77,11 +94,6 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
       
-      - name: Download Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: lambda-zip
-
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
