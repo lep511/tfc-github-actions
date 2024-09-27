@@ -69,15 +69,12 @@ jobs:
             lambda-api/.cargo
           key: ${{ runner.os }}-cargo-${{ hashFiles('lambda-api/Cargo.lock') }}
 
-      - name: Build Lambda Project
+      - name: Build & Deploy Lambda Project
         #run: cargo lambda build --release --arm64 --output-format zip
-        run: cargo lambda build --release --output-format zip
+        run: |
+          cargo lambda build --release
+          cargo lambda deploy 
         working-directory: lambda-api
-
-      - name: Deploy Lambda Project
-        run: cargo lambda deploy
-        working-directory: lambda-api
-
   deploy:
     name: Deploy to AWS
     runs-on: ubuntu-latest
