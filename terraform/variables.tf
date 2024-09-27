@@ -3,6 +3,7 @@ variable "default_tags" {
   description = "Map of default tags to apply to resources"
   default = {
     project = "terraform-aws-microservices"
+    applicationid = aws_servicecatalogappregistry_application.terraform_app.id
   }
 }
 
