@@ -14,7 +14,11 @@ terraform {
 provider "aws" {
   region = var.region
   default_tags {
-    tags = var.default_tags
+    tags = {
+      Environment     = "Test"
+      Owner           = "Ops"
+      awsApplication  = aws_servicecatalogappregistry_application.terraform_app.arn
+    }    
   }
   
   # Make it faster by skipping something
@@ -23,10 +27,16 @@ provider "aws" {
   # skip_credentials_validation = true
 }
 
+# Create application using aliased 'application' provider
+provider "aws" {
+  region = var.region
+  alias = "application"
+}
 
 # Register new application
 # An AWS Service Catalog AppRegistry Application is displayed in the AWS Console under "MyApplications".
 resource "aws_servicecatalogappregistry_application" "terraform_app" {
+  provider    = aws.application
   name        = "TerraformApp"
   description = "New sample terraform application"
 }
