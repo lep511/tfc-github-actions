@@ -5,6 +5,9 @@
 *.tfstate
 *.tfstate.*
 
+# HCL Files
+*.hcl
+
 *.backup
 
 # Crash log files

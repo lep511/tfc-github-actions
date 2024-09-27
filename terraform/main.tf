@@ -10,7 +10,6 @@ terraform {
   } 
 }
 
-# Configure the AWS Provider
 provider "aws" {
   region = var.region
   default_tags {
@@ -23,6 +22,21 @@ provider "aws" {
   # skip_region_validation      = true
   # skip_credentials_validation = true
 }
+
+provider "aws" {
+  alias = "application"
+}
+
+# Register new application
+# An AWS Service Catalog AppRegistry Application is displayed in the AWS Console under "MyApplications".
+resource "aws_servicecatalogappregistry_application" "terraform_app" {
+  provider    = aws.application
+  name        = "TerraformApp"
+  description = "New sample terraform application"
+}
+
+# Configure the AWS Provider
+
 
 module "eventbridge" {
   source = "terraform-aws-modules/eventbridge/aws"
@@ -65,13 +79,6 @@ module "eventbridge" {
 ##################
 # Extra resources
 ##################
-
-# Register new application
-# An AWS Service Catalog AppRegistry Application is displayed in the AWS Console under "MyApplications".
-resource "aws_servicecatalogappregistry_application" "terraform_app" {
-  name        = "TerraformApp"
-  description = "New sample terraform application"
-}
 
 resource "random_pet" "this" {
   length = 2
