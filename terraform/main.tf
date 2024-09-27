@@ -17,7 +17,7 @@ provider "aws" {
     tags = {
       Environment     = "Test"
       Owner           = "Ops"
-      awsApplication  = aws_servicecatalogappregistry_application.terraform_app.arn
+      awsApplication  = aws_servicecatalogappregistry_application.terraform_app.application_tag.awsApplication
     }    
   }
   
