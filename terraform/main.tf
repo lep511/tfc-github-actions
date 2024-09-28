@@ -12,6 +12,7 @@ terraform {
 
 # Configure the AWS Provider
 provider "aws" {
+  region = var.region
   default_tags {
     tags = {
       environment     = var.environment
@@ -30,6 +31,7 @@ provider "aws" {
 # Create application using aliased 'application' provider
 provider "aws" {
   alias = "application"
+  region = var.region
 }
 
 # Register new application
