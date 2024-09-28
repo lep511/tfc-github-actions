@@ -5,6 +5,12 @@ variable "application_name" {
   default     = "TerraformApp"
 }
 
+variable "environment" {
+  type        = string
+  description = "The name of the environment"
+  default     = "dev"
+}
+
 # DynamoDB Table Name
 variable "dynamo_table_name" {
   type        = string
