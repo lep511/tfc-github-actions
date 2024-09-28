@@ -81,13 +81,6 @@ jobs:
     needs: build
 
     steps:
-      - name: Configure aws credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ vars.AWS_REGION }}
-
       - name: Checkout Code
         uses: actions/checkout@v4
       
@@ -113,9 +106,9 @@ jobs:
 
       - name: Show plan
         run: |
-          echo "💡 ${{ steps.plan.outputs.stdout }}"
-          echo "❌ ${{ steps.plan.outputs.stderr }}"
-          echo "❌ ${{ steps.plan.outputs.exitcode }}"
+          echo "${{ steps.plan.outputs.stdout }}"
+          echo "${{ steps.plan.outputs.stderr }}"
+          echo "${{ steps.plan.outputs.exitcode }}"
         continue-on-error: true
 
       - name: Terraform Apply

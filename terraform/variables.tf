@@ -1,12 +1,8 @@
+# The region is specified in  GitHub - settings/variables/actions
 variable "application_name" {
   type        = string
   description = "The name of the application"
   default     = "TerraformApp"
-}
-variable "region" {
-  type        = string
-  description = "The region to deploy resources to"
-  default = "us-east-1"
 }
 
 # DynamoDB Table Name
