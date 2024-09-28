@@ -32,13 +32,6 @@ jobs:
       artifacts: ${{ needs.build.outputs.artifacts }}
 
     steps:
-      - name: Configure aws credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ vars.AWS_REGION }}
-
       - name: Checkout Code
         uses: actions/checkout@v4
 
@@ -58,7 +51,7 @@ jobs:
         with:
           repo: cargo-lambda/cargo-lambda
           # Note: make sure you are using a recent version of cargo-lambda: https://github.com/cargo-lambda/cargo-lambda/releases
-          tag: v1.4.0 # Remove this if you want to grab always the latest version
+          # tag: v1.4.0 # Remove this if you want to grab always the latest version
           platform: linux # Other valid options: 'windows' or 'darwin'
           arch: x86_64 # Valid options for linux: x86_64 or aarch64
 
@@ -72,8 +65,8 @@ jobs:
       - name: Build & Deploy Lambda Project
         #run: cargo lambda build --release --arm64 --output-format zip
         run: |
-          cargo lambda build --release
-          cargo lambda deploy 
+          cargo lambda build --release --output-format zip
+          ls
         working-directory: lambda-api
   deploy:
     name: Deploy to AWS
@@ -81,6 +74,13 @@ jobs:
     needs: build
 
     steps:
+      # - name: Configure aws credentials
+      #   uses: aws-actions/configure-aws-credentials@v4
+      #   with:
+      #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      #     aws-region: ${{ vars.AWS_REGION }}
+      
       - name: Checkout Code
         uses: actions/checkout@v4
       
