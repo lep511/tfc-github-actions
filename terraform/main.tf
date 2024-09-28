@@ -38,7 +38,7 @@ provider "aws" {
 # An AWS Service Catalog AppRegistry Application is displayed in the AWS Console under "MyApplications".
 resource "aws_servicecatalogappregistry_application" "terraform_app" {
   provider    = aws.application
-  name        = "${var.application_name}-${var.environment}"
+  name        = var.application_name
   description = "New sample terraform application"
 }
 
