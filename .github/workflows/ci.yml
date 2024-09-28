@@ -18,9 +18,9 @@ permissions:
   id-token: write
   contents: read
 
-env:
-  TF_CLOUD_ORGANIZATION: "aws-workshop-lep511"
-  TF_WORKSPACE: "learn-terraform-github-actions"
+# env:
+#   TF_CLOUD_ORGANIZATION: "aws-workshop-lep511"
+#   TF_WORKSPACE: "learn-terraform-github-actions"
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
