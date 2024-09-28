@@ -1,4 +1,5 @@
-use tracing_subscriber::filter::{EnvFilter, LevelFilter};use lambda_http::{run, service_fn, Body, Error, Request, RequestExt, Response};
+use tracing_subscriber::filter::{EnvFilter, LevelFilter};
+use lambda_http::{run, service_fn, Body, Error, Request, RequestExt, Response};
 
 /// Handles an AWS Lambda HTTP request asynchronously.
 ///
