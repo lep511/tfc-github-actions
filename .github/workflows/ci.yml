@@ -121,6 +121,7 @@ jobs:
       - name: Download Artifact
         uses: actions/download-artifact@v4
         with:
+          path: terraform
           name: lambda-zip
       
       - name: Show data
