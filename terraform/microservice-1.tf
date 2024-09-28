@@ -4,7 +4,7 @@ module "lambda_function" {
 
   function_name = "rust-aws-lambda"
   description   = "Create an AWS Lambda in Rust with Terraform"
-  runtime       = "provided.al2"
+  runtime       = "provided.al2023"
   architectures = ["x86_64"]
   handler       = "bootstrap"
 
