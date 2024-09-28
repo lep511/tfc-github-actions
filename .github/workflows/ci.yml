@@ -113,15 +113,3 @@ jobs:
       - name: Terraform Apply
         run: terraform apply -auto-approve -input=false
         working-directory: terraform
-  
-  rerun-on-failure:
-      needs: deploy
-      if: failure() && fromJSON(github.run_attempt) < 2
-      runs-on: ubuntu-latest
-      steps:
-        - env:
-            GH_REPO: ${{ github.repository }}
-            GH_TOKEN: ${{ github.token }}
-            GH_DEBUG: api
-          run: gh workflow run rerun.yml -F run_id=${{ github.run_id }}
-        
