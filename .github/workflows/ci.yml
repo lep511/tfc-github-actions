@@ -62,12 +62,19 @@ jobs:
             lambda-api/.cargo
           key: ${{ runner.os }}-cargo-${{ hashFiles('lambda-api/Cargo.lock') }}
 
-      - name: Build & Deploy Lambda Project
+      - name: Build Lambda Project
         #run: cargo lambda build --release --arm64 --output-format zip
         run: |
           cargo lambda build --release --output-format zip
-          ls
         working-directory: lambda-api
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        id: artifact-upload-step
+        with:
+          name: lambda-zip
+          path: lambda-api/target/lambda/lambda-api/bootstrap.zip
+
   deploy:
     name: Deploy to AWS
     runs-on: ubuntu-latest
@@ -110,6 +117,14 @@ jobs:
           echo "${{ steps.plan.outputs.stderr }}"
           echo "${{ steps.plan.outputs.exitcode }}"
         continue-on-error: true
+      
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: lambda-zip
+      
+      - name: Show data
+        run: ls -al *
 
       - name: Terraform Apply
         run: terraform apply -auto-approve -input=false
