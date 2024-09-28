@@ -1,10 +1,24 @@
+# Lambda - Rust runtime
+module "lambda_function" {
+  source = "terraform-aws-modules/lambda/aws"
+
+  function_name = "rust-aws-lambda"
+  description   = "Create an AWS Lambda in Rust with Terraform"
+  runtime       = "provided.al2023"
+  architectures = ["x86_64"]
+  handler       = "bootstrap"
+
+  create_package         = false
+  local_existing_package = "bootstrap.zip"
+}
+
+
 # DynamoDB Table
 resource "random_pet" "table_name" {
   prefix    = "orders"
   separator = "_"
   length    = 4
 }
-
 resource "aws_dynamodb_table" "basic-dynamodb-table" {
   name           = random_pet.table_name.id
   billing_mode   = "PROVISIONED"

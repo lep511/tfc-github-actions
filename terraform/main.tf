@@ -5,7 +5,7 @@ terraform {
     organization = "aws-workshop-lep511" 
 
     workspaces { 
-      name = "learn-terraform-github-actions" 
+      name = "terraform-github-actions-dev" 
     } 
   } 
 }
@@ -15,7 +15,7 @@ provider "aws" {
   region = var.region
   default_tags {
     tags = {
-      environment     = "Test"
+      environment     = var.environment
       owner           = "Ops"
       applicationName = var.application_name
       awsApplication  = aws_servicecatalogappregistry_application.terraform_app.application_tag.awsApplication
@@ -30,8 +30,8 @@ provider "aws" {
 
 # Create application using aliased 'application' provider
 provider "aws" {
-  region = var.region
   alias = "application"
+  region = var.region
 }
 
 # Register new application
