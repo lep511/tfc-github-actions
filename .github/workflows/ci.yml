@@ -111,11 +111,14 @@ jobs:
           name: lambda-zip
 
       - name: Terraform Apply
-        run: |
-          terraform apply -auto-approve -input=false -compact-warnings -no-color
-          if [[ $? -ne 0 ]]; then
-            terraform plan -input=false -no-color
-            terraform apply -auto-approve -input=false -compact-warnings -no-color
-          fi
+        run: terraform apply -auto-approve -input=false -compact-warnings -no-color
         working-directory: terraform
         continue-on-error: true
+      
+      - name: If fail re-run terraform
+        if: ${{ failure() }}
+        run: |
+          terraform init -upgrade  
+          terraform plan -input=false -no-color
+          terraform apply -auto-approve -input=false -compact-warnings -no-color
+        working-directory: terraform
