@@ -113,7 +113,6 @@ jobs:
       - name: Terraform Apply
         run: terraform apply -auto-approve -input=false -compact-warnings -no-color
         working-directory: terraform
-        continue-on-error: true
       
       - name: If fail re-run terraform
         if: ${{ failure() }}
