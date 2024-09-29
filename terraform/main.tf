@@ -5,7 +5,7 @@ terraform {
     organization = "aws-workshop-lep511" 
 
     workspaces { 
-      name = "terraform-github-actions-dev" 
+      name = "terraform-github-actions-prod" 
     } 
   } 
 }
@@ -46,7 +46,7 @@ resource "aws_servicecatalogappregistry_application" "terraform_app" {
 module "eventbridge" {
   source = "terraform-aws-modules/eventbridge/aws"
 
-  bus_name = "${random_pet.this.id}-bus"
+  bus_name = "${var.environment}-order-bus"
 
   attach_sqs_policy = true
   sqs_target_arns = [
@@ -81,16 +81,12 @@ module "eventbridge" {
 # Extra resources
 ##################
 
-resource "random_pet" "this" {
-  length = 2
-}
-
 module "api_gateway" {
   source  = "terraform-aws-modules/apigateway-v2/aws"
   version = "~> 4.0"
 
-  name          = "${random_pet.this.id}-http"
-  description   = "My ${random_pet.this.id} HTTP API Gateway"
+  name          = "${var.environment}-http-api"
+  description   = "My HTTP API Gateway"
   protocol_type = "HTTP"
 
   create_api_domain_name = false
@@ -120,7 +116,7 @@ module "apigateway_put_events_to_eventbridge_role" {
 
   create_role = true
 
-  role_name         = "apigateway-put-events-to-eventbridge"
+  role_name         = "${var.environment}-apigateway-put-events-to-eventbridge"
   role_requires_mfa = false
 
   trusted_role_services = ["apigateway.amazonaws.com"]
@@ -134,7 +130,7 @@ module "apigateway_put_events_to_eventbridge_policy" {
   source  = "terraform-aws-modules/iam/aws//modules/iam-policy"
   version = "~> 4.0"
 
-  name        = "apigateway-put-events-to-eventbridge"
+  name        = "${var.environment}-apigateway-put-events-to-eventbridge"
   description = "Allow PutEvents to EventBridge"
 
   policy = data.aws_iam_policy_document.apigateway_put_events_to_eventbridge_policy.json
@@ -151,11 +147,11 @@ data "aws_iam_policy_document" "apigateway_put_events_to_eventbridge_policy" {
 }
 
 resource "aws_sqs_queue" "dlq" {
-  name = "${random_pet.this.id}-dlq"
+  name = "${var.environment}-orderqueue-dlq"
 }
 
 resource "aws_sqs_queue" "queue" {
-  name = random_pet.this.id
+  name = "${var.environment}-orderqueue"
 }
 
 resource "aws_sqs_queue_policy" "queue" {
