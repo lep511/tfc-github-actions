@@ -111,5 +111,5 @@ jobs:
           name: lambda-zip
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve -input=false
+        run: terraform apply -auto-approve -input=false -compact-warnings -no-color
         working-directory: terraform
