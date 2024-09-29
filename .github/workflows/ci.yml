@@ -120,3 +120,4 @@ jobs:
           terraform init -upgrade  
           terraform plan -input=false -no-color
           terraform apply -auto-approve -input=false -compact-warnings -no-color
+        working-directory: terraform
