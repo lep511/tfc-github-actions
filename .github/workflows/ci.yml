@@ -111,5 +111,10 @@ jobs:
           name: lambda-zip
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve -input=false -compact-warnings -no-color
+        run: |
+          terraform apply -auto-approve -input=false -compact-warnings -no-color
+          if [[ $? -ne 0 ]]; then
+            terraform plan -input=false -no-color
+            terraform apply -auto-approve -input=false -compact-warnings -no-color
+          fi
         working-directory: terraform
