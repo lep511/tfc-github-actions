@@ -5,7 +5,7 @@ terraform {
     organization = "aws-workshop-lep511" 
 
     workspaces { 
-      name = "terraform-github-actions-prod" 
+      name = "terraform-github-actions-dev" 
     } 
   } 
 }

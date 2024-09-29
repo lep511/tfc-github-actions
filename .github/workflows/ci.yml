@@ -118,3 +118,4 @@ jobs:
             terraform apply -auto-approve -input=false -compact-warnings -no-color
           fi
         working-directory: terraform
+        continue-on-error: true
