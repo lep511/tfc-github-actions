@@ -82,7 +82,7 @@ jobs:
         with:
           terraform_version: 1.9.6
           cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
-
+              
       - name: Terraform Init
         run: terraform init -upgrade
         working-directory: terraform
@@ -90,6 +90,16 @@ jobs:
       - name: Terraform Validate
         id: validate
         run: terraform validate -no-color
+        working-directory: terraform
+
+      - name: App - Terraform Plan
+        run: terraform plan -input=false -no-color
+        working-directory: terraform/app
+        continue-on-error: true
+
+      - name: App - Terraform Apply
+        run: terraform apply -auto-approve -input=false -compact-warnings -no-color
+        working-directory: terraform/app
 
       - name: Terraform Plan
         id: Plan
@@ -114,10 +124,10 @@ jobs:
         run: terraform apply -auto-approve -input=false -compact-warnings -no-color
         working-directory: terraform
       
-      - name: If fail re-run terraform
-        if: ${{ failure() }}
-        run: |
-          terraform init -upgrade  
-          terraform plan -input=false -no-color
-          terraform apply -auto-approve -input=false -compact-warnings -no-color
-        working-directory: terraform
+      # - name: If fail re-run terraform
+      #   if: ${{ failure() }}
+      #   run: |
+      #     terraform init -upgrade  
+      #     terraform plan -input=false -no-color
+      #     terraform apply -auto-approve -input=false -compact-warnings -no-color
+      #   working-directory: terraform
