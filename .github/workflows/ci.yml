@@ -83,16 +83,19 @@ jobs:
           terraform_version: 1.9.6
           cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
               
-      - name: App - Terraform Init
+      - name: Pre-build App - Terraform Init
+        if: contains(github.event.head_commit.message, 'first_deploy')
         run: terraform init -upgrade
         working-directory: terraform/app
       
-      - name: App - Terraform Plan
+      - name: Pre-build App  - Terraform Plan
+        if: contains(github.event.head_commit.message, 'first_deploy')
         run: terraform plan -input=false -no-color
         working-directory: terraform/app
         continue-on-error: true
 
-      - name: App - Terraform Apply
+      - name: Pre-build App  - Terraform Apply
+        if: contains(github.event.head_commit.message, 'first_deploy')
         run: terraform apply -auto-approve -input=false -compact-warnings -no-color
         working-directory: terraform/app
       
@@ -127,11 +130,3 @@ jobs:
       - name: Terraform Apply
         run: terraform apply -auto-approve -input=false -compact-warnings -no-color
         working-directory: terraform
-      
-      # - name: If fail re-run terraform
-      #   if: ${{ failure() }}
-      #   run: |
-      #     terraform init -upgrade  
-      #     terraform plan -input=false -no-color
-      #     terraform apply -auto-approve -input=false -compact-warnings -no-color
-      #   working-directory: terraform
