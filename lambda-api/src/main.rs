@@ -31,6 +31,4 @@ async fn main() -> Result<(), eventbridge::Error> {
     let client = aws_sdk_eventbridge::Client::new(&config);
 
     lambda_runtime::run(service_fn(handler)).await
-    
-    run(service_fn(handler)).await
 }
