@@ -1,7 +1,8 @@
 use lambda_runtime::{service_fn, LambdaEvent, Error};
-use serde_json::{json, Value};
 use tracing_subscriber::filter::{EnvFilter, LevelFilter};
-use aws_sdk_eventbridge as eventbridge;
+use serde_json::{json, Value};
+// use aws_sdk_eventbridge as eventbridge;
+
 
 async fn handler(event: LambdaEvent<Value>) -> Result<Value, Error> {
     // Log the entire event
@@ -14,7 +15,7 @@ async fn handler(event: LambdaEvent<Value>) -> Result<Value, Error> {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), eventbridge::Error> {
+async fn main() -> Result<(), Error> {
     tracing_subscriber::fmt()
         .with_env_filter(
             EnvFilter::builder()
@@ -27,8 +28,8 @@ async fn main() -> Result<(), eventbridge::Error> {
         .without_time()
         .init();
     
-    let config = aws_config::load_from_env().await;
-    let client = aws_sdk_eventbridge::Client::new(&config);
+    //let config = aws_config::load_from_env().await;
+    //let client = aws_sdk_eventbridge::Client::new(&config);
 
     lambda_runtime::run(service_fn(handler)).await
 }
