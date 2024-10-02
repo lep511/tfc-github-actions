@@ -1,6 +1,6 @@
 # Configure the AWS Provider
 provider "aws" {
-  region = var.region
+  region = var.aws_region
   default_tags {
     tags = {
       environment     = var.environment
