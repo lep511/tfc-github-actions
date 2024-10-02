@@ -5,7 +5,7 @@ terraform {
     organization = "aws-workshop-lep511" 
 
     workspaces { 
-      name = "terraform-github-actions-stage" 
+      name = "terraform-github-actions-dev" 
     } 
   } 
 }
@@ -49,6 +49,12 @@ module "eventbridge" {
   bus_name = "${var.environment}-order-bus"
 
   attach_sqs_policy = true
+  attach_lambda_policy = true
+
+  lambda_target_arns   = [
+    module.lambda.lambda_function_arn
+  ]
+
   sqs_target_arns = [
     aws_sqs_queue.queue.arn,
     aws_sqs_queue.dlq.arn
@@ -58,7 +64,7 @@ module "eventbridge" {
     orders_create = {
       description = "Capture all created orders",
       event_pattern = jsonencode({
-        "detail-type" : ["Order Create"],
+        "detail-type" : ["orderCreate"],
         "source" : ["api.gateway.orders.create"]
       })
     }
@@ -71,11 +77,59 @@ module "eventbridge" {
         arn             = aws_sqs_queue.queue.arn
         dead_letter_arn = aws_sqs_queue.dlq.arn
         target_id       = "send-orders-to-sqs"
+      },
+      {
+        name            = "send-orders-to-lambda"
+        arn             = module.lambda.lambda_function_arn
+        target_id       = "send-orders-to-lambda"
       }
     ]
   }
 }
+##################
+# Lambda [Rust]
+##################
+module "lambda" {
+  source = "terraform-aws-modules/lambda/aws"
 
+  function_name = "${var.environment}-rust-aws-lambda"
+  description   = "Create an AWS Lambda in Rust with Terraform"
+  runtime       = "provided.al2023"
+  architectures = ["x86_64"]
+  handler       = "bootstrap"
+
+  create_package         = false
+  local_existing_package = "bootstrap.zip"
+  create_current_version_allowed_triggers = false
+  allowed_triggers = {
+    ScanAmiRule = {
+      principal  = "events.amazonaws.com"
+      source_arn = module.eventbridge.eventbridge_rule_arns["orders_create"]
+    }
+  }
+}
+
+##################
+# DynamoDB Table
+##################
+resource "aws_dynamodb_table" "basic-dynamodb-table" {
+  name           = "${var.environment}-order-table"
+  billing_mode   = "PROVISIONED"
+  read_capacity  = 10
+  write_capacity = 10
+  hash_key       = "SourceOrderID"
+  range_key      = "SourceItemID"
+
+  attribute {
+    name = "SourceOrderID"
+    type = "S"
+  }
+
+  attribute {
+    name = "SourceItemID"
+    type = "S"
+  }
+}
 
 ##################
 # Extra resources
@@ -100,7 +154,7 @@ module "api_gateway" {
       request_parameters = jsonencode({
         EventBusName = module.eventbridge.eventbridge_bus_name,
         Source       = "api.gateway.orders.create",
-        DetailType   = "Order Create",
+        DetailType   = "orderCreate",
         Detail       = "$request.body",
         Time         = "$context.requestTimeEpoch"
       })

@@ -1,67 +1,22 @@
+use aws_lambda_events::event::eventbridge::EventBridgeEvent;
+use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 use tracing_subscriber::filter::{EnvFilter, LevelFilter};
-use lambda_http::{run, service_fn, Body, Error, Request, RequestExt, Response};
+use serde_json::{json, Value};
 
-/// Handles an AWS Lambda HTTP request asynchronously.
-///
-/// # Arguments
-///
-/// * `event` - The incoming HTTP request event.
-///
-/// # Returns
-///
-/// Returns a `Result` containing the HTTP response or an error.
-///
-/// # Examples
-///
-/// ```rust
-/// use lambda_http::{Request, Body, Response};
-/// use lambda_http::http::Method;
-/// use std::convert::Infallible;
-///
-/// async fn handle_request(event: Request) -> Result<Response<Body>, Infallible> {
-///     // Handle the HTTP request here
-///     unimplemented!();
-/// }
-/// ```
-async fn handler(event: Request) -> Result<Response<Body>, Error> {
+/// This is the main body for the function.
+/// Write your code inside it.
+/// There are some code example in the following URLs:
+/// - https://github.com/awslabs/aws-lambda-rust-runtime/tree/main/examples
+/// - https://github.com/aws-samples/serverless-rust-demo/
+async fn function_handler(event: LambdaEvent<EventBridgeEvent>) -> Result<Value, Error> {
     // Extract some useful information from the request
-    let who = event
-        .query_string_parameters_ref()
-        .and_then(|params| params.first("name"))
-        .unwrap_or("world");
-    let message = format!("Hello {who}, this is an AWS Lambda HTTP request");
+    let _detail_type = event.payload.detail_type;
+    let event_detail = event.payload.detail;
+    tracing::info!("Received event: {:?}", event_detail);
 
-    // Return something that implements IntoResponse.
-    // It will be serialized to the right response event automatically by the runtime
-    let resp = Response::builder()
-        .status(200)
-        .header("content-type", "text/html")
-        .body(message.into())
-        .map_err(Box::new)?;
-    Ok(resp)
+    Ok(json!({ "message": format!("Hello world!") }))
 }
 
-/// Initializes and runs the AWS Lambda HTTP handler.
-///
-/// # Returns
-///
-/// Returns a `Result` indicating success or failure.
-///
-/// # Errors
-///
-/// This function returns an error if there is an issue initializing the tracing subscriber or
-/// running the Lambda handler.
-///
-/// # Examples
-///
-/// ```rust
-/// use lambda_http::Error;
-///
-/// #[tokio::main]
-/// async fn main() -> Result<(), Error> {
-///     lambda_http_rust::run_lambda().await
-/// }
-/// ```
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     tracing_subscriber::fmt()
@@ -76,5 +31,5 @@ async fn main() -> Result<(), Error> {
         .without_time()
         .init();
 
-    run(service_fn(handler)).await
+    run(service_fn(function_handler)).await
 }

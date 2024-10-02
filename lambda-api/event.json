@@ -1,0 +1,51 @@
+{
+    "version":"0",
+    "id":"db3ad49b-006b-6231-d892-7cc312efdc47",
+    "detail-type":"Order Create",
+    "source":"api.gateway.orders.create",
+    "account":"258726285982",
+    "time":"2024-10-02T00:18:28Z",
+    "region":"us-east-1",
+    "resources":[
+        
+    ],
+    "detail":{
+        "data":{
+            "destination":{
+                "name":"accountName"
+            },
+            "orderData":{
+                "sourceOrderId":"665558",
+                "items":[
+                    {
+                        "sku":"Business Cards",
+                        "sourceItemId":"1234512346",
+                        "components":[
+                            {
+                                "code":"Content",
+                                "fetch":true,
+                                "path":"http://www.w2psite.com/businessCard.pdf"
+                            }
+                        ]
+                    }
+                ],
+                "shipments":[
+                    {
+                        "shipTo":{
+                            "name":"John Doe",
+                            "companyName":"Acme",
+                            "address1":"1234 Main St.",
+                            "town":"Capitol",
+                            "postcode":"12345",
+                            "isoCountry":"US"
+                        },
+                        "carrier":{
+                            "code":"fedex",
+                            "service":"ground"
+                        }
+                    }
+                ]
+            }
+        }
+    }
+}
