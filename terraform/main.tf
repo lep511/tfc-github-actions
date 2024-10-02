@@ -100,6 +100,13 @@ module "lambda" {
 
   create_package         = false
   local_existing_package = "bootstrap.zip"
+  create_current_version_allowed_triggers = false
+  allowed_triggers = {
+    ScanAmiRule = {
+      principal  = "events.amazonaws.com"
+      source_arn = module.eventbridge.eventbridge_bus_arn
+    }
+  }
 }
 
 ##################
