@@ -49,6 +49,12 @@ module "eventbridge" {
   bus_name = "${var.environment}-order-bus"
 
   attach_sqs_policy = true
+  attach_lambda_policy = true
+
+  lambda_target_arns   = [
+    module.lambda_function.lambda_function_arn
+  ]
+
   sqs_target_arns = [
     aws_sqs_queue.queue.arn,
     aws_sqs_queue.dlq.arn
@@ -58,7 +64,7 @@ module "eventbridge" {
     orders_create = {
       description = "Capture all created orders",
       event_pattern = jsonencode({
-        "detail-type" : ["Order Create"],
+        "detail-type" : ["orderCreate"],
         "source" : ["api.gateway.orders.create"]
       })
     }
@@ -71,6 +77,11 @@ module "eventbridge" {
         arn             = aws_sqs_queue.queue.arn
         dead_letter_arn = aws_sqs_queue.dlq.arn
         target_id       = "send-orders-to-sqs"
+      },
+      {
+        name            = "send-orders-to-lambda"
+        arn             = module.lambda_function.arn
+        target_id       = "send-orders-to-lambda"
       }
     ]
   }
@@ -100,7 +111,7 @@ module "api_gateway" {
       request_parameters = jsonencode({
         EventBusName = module.eventbridge.eventbridge_bus_name,
         Source       = "api.gateway.orders.create",
-        DetailType   = "Order Create",
+        DetailType   = "orderCreate",
         Detail       = "$request.body",
         Time         = "$context.requestTimeEpoch"
       })

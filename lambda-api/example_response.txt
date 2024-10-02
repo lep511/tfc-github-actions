@@ -1,0 +1,15 @@
+INFO Lambda runtime invoke{requestId="e31f0bcd-56b1-47fa-bca6-dd0c874dc1f8" 
+xrayTraceId="Root=1-66fc9152-2b716761565ca7a56980d79b;Parent=4248836b3f9951e2;Sampled=0;Lineage=1:5af39c32:0"}: 
+
+Received event: 
+
+EventBridgeEvent { version: Some("0"), id: Some("4ba36174-0a77-407b-7cef-88de3b2b2441"), detail_type: "Order Create", 
+source: "api.gateway.orders.create", account: Some("258726285982"), time: Some(2024-10-02T00:18:26Z), 
+region: Some("us-east-1"), resources: Some([]), 
+
+detail: Object {"data": Object {"destination": Object {"name": String("accountName")}, "orderData": Object {"items": Array [Object 
+{"components": Array [Object {"code": String("Content"), "fetch": Bool(true), "path": String("http://www.w2psite.com/businessCard.pdf")}], 
+"sku": String("Business Cards"), "sourceItemId": String("1234512346")}], "shipments": Array [Object {"carrier": Object {"code": String("fedex"), 
+"service": String("ground")}, "shipTo": Object {"address1": String("1234 Main St."), "companyName": String("Acme"), "isoCountry": String("US"),
+ "name": String("John Doe"), "postcode": String("12345"), "town": String("Capitol")}}], "sourceOrderId": String("665558")}}} }
+

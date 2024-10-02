@@ -1,20 +1,20 @@
 use aws_lambda_events::event::eventbridge::EventBridgeEvent;
 use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 use tracing_subscriber::filter::{EnvFilter, LevelFilter};
-
+use serde_json::{json, Value};
 
 /// This is the main body for the function.
 /// Write your code inside it.
 /// There are some code example in the following URLs:
 /// - https://github.com/awslabs/aws-lambda-rust-runtime/tree/main/examples
 /// - https://github.com/aws-samples/serverless-rust-demo/
-async fn function_handler(event: LambdaEvent<EventBridgeEvent>) -> Result<(), Error> {
+async fn function_handler(event: LambdaEvent<EventBridgeEvent>) -> Result<Value, Error> {
     // Extract some useful information from the request
-    let payload = event.payload;
-    tracing::info!("Received event: {:?}", payload);
+    let _detail_type = event.payload.detail_type;
+    let event_detail = event.payload.detail;
+    tracing::info!("Received event: {:?}", event_detail);
 
-    // Return `Response` (it will be serialized to JSON automatically by the runtime)
-    Ok(())
+    Ok(json!({ "message": format!("Hello world!") }))
 }
 
 #[tokio::main]
