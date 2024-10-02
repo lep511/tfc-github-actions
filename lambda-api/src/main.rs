@@ -1,17 +1,20 @@
-use lambda_runtime::{service_fn, LambdaEvent, Error};
+use aws_lambda_events::event::eventbridge::EventBridgeEvent;
+use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 use tracing_subscriber::filter::{EnvFilter, LevelFilter};
-use serde_json::{json, Value};
-// use aws_sdk_eventbridge as eventbridge;
 
 
-async fn handler(event: LambdaEvent<Value>) -> Result<Value, Error> {
-    // Log the entire event
-    println!("Event: {:?}", event.payload);
-    
+/// This is the main body for the function.
+/// Write your code inside it.
+/// There are some code example in the following URLs:
+/// - https://github.com/awslabs/aws-lambda-rust-runtime/tree/main/examples
+/// - https://github.com/aws-samples/serverless-rust-demo/
+async fn function_handler(event: LambdaEvent<EventBridgeEvent>) -> Result<(), Error> {
+    // Extract some useful information from the request
     let payload = event.payload;
-    let first_name = payload["firstName"].as_str().unwrap_or("world");
-    
-    Ok(json!({ "message": format!("Hello, {first_name}!") }))
+    tracing::info!("Received event: {:?}", payload);
+
+    // Return `Response` (it will be serialized to JSON automatically by the runtime)
+    Ok(())
 }
 
 #[tokio::main]
@@ -27,9 +30,6 @@ async fn main() -> Result<(), Error> {
         // disabling time is handy because CloudWatch will add the ingestion time.
         .without_time()
         .init();
-    
-    //let config = aws_config::load_from_env().await;
-    //let client = aws_sdk_eventbridge::Client::new(&config);
 
-    lambda_runtime::run(service_fn(handler)).await
+    run(service_fn(function_handler)).await
 }
