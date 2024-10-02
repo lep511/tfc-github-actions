@@ -82,7 +82,7 @@ jobs:
         with:
           terraform_version: 1.9.6
           cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
-              
+            
       - name: Pre-build App - Terraform Init
         if: contains(github.event.head_commit.message, 'first_deploy')
         run: terraform init -upgrade
