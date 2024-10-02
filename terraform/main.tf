@@ -104,7 +104,7 @@ module "lambda" {
   allowed_triggers = {
     ScanAmiRule = {
       principal  = "events.amazonaws.com"
-      source_arn = module.eventbridge.eventbridge_bus_arn
+      source_arn = module.eventbridge.eventbridge_rule_arns["orders_create"]
     }
   }
 }
