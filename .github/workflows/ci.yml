@@ -6,9 +6,9 @@ name: CI
 on:
   # Triggers the workflow on push or pull request events but only for the "main" branch
   push:
-    branches: [ "dev" ]
+    branches: [ "dev", "stage", "prod"]
   pull_request:
-    branches: [ "dev" ]
+    branches: [ "dev", "stage", "prod" ]
     paths-ignore:
       - "**/README.md"
       - "**/LICENSE"
@@ -17,10 +17,7 @@ on:
 permissions:
   id-token: write
   contents: read
-
-env:
-  TF_CLOUD_ORGANIZATION: "aws-workshop-lep511"
-  TF_WORKSPACE: "learn-terraform-github-actions"
+  actions: write
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -34,9 +31,6 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-
-      #- name: Install Rust toolchain
-      #  uses: dtolnay/rust-toolchain@stable
 
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -55,32 +49,32 @@ jobs:
           platform: linux # Other valid options: 'windows' or 'darwin'
           arch: x86_64 # Valid options for linux: x86_64 or aarch64
 
-      - name: Cache Cargo Dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            lambda-api/.cargo
-          key: ${{ runner.os }}-cargo-${{ hashFiles('lambda-api/Cargo.lock') }}
+      # - name: Cache Cargo Dependencies
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: |
+      #       lambda-api/.cargo
+      #     key: ${{ runner.os }}-cargo-${{ hashFiles('lambda-api/Cargo.lock') }}
 
-      - name: Build & Deploy Lambda Project
+      - name: Build Lambda Project
         #run: cargo lambda build --release --arm64 --output-format zip
         run: |
           cargo lambda build --release --output-format zip
-          ls
         working-directory: lambda-api
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        id: artifact-upload-step
+        with:
+          name: lambda-zip
+          path: lambda-api/target/lambda/lambda-api/bootstrap.zip
+
   deploy:
     name: Deploy to AWS
     runs-on: ubuntu-latest
     needs: build
 
-    steps:
-      # - name: Configure aws credentials
-      #   uses: aws-actions/configure-aws-credentials@v4
-      #   with:
-      #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      #     aws-region: ${{ vars.AWS_REGION }}
-      
+    steps:     
       - name: Checkout Code
         uses: actions/checkout@v4
       
@@ -90,13 +84,50 @@ jobs:
           terraform_version: 1.9.6
           cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
 
-      - name: Terraform Init
-        run: terraform init
-        working-directory: terraform
+      - name: Clear cache
+        if: contains(github.event.head_commit.message, 'first_deploy')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            console.log("About to clear")
+            const caches = await github.rest.actions.getActionsCacheList({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            })
+            for (const cache of caches.data.actions_caches) {
+              console.log(cache)
+              github.rest.actions.deleteActionsCacheById({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                cache_id: cache.id,
+              })
+            }
+            console.log("Clear completed")
+            
+      - name: Pre-build App - Terraform Init
+        if: contains(github.event.head_commit.message, 'first_deploy')
+        run: terraform init -upgrade
+        working-directory: terraform/app
       
+      - name: Pre-build App  - Terraform Plan
+        if: contains(github.event.head_commit.message, 'first_deploy')
+        run: terraform plan -input=false -no-color
+        working-directory: terraform/app
+        continue-on-error: true
+
+      - name: Pre-build App  - Terraform Apply
+        if: contains(github.event.head_commit.message, 'first_deploy')
+        run: terraform apply -auto-approve -input=false -compact-warnings -no-color
+        working-directory: terraform/app
+      
+      - name: Terraform Init
+        run: terraform init -upgrade
+        working-directory: terraform
+
       - name: Terraform Validate
         id: validate
         run: terraform validate -no-color
+        working-directory: terraform
 
       - name: Terraform Plan
         id: Plan
@@ -110,8 +141,14 @@ jobs:
           echo "${{ steps.plan.outputs.stderr }}"
           echo "${{ steps.plan.outputs.exitcode }}"
         continue-on-error: true
+      
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          path: terraform
+          name: lambda-zip
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve -input=false
+        run: terraform apply -auto-approve -input=false -compact-warnings -no-color
         working-directory: terraform
-        
+
