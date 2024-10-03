@@ -93,6 +93,22 @@ module "lambda" {
     DYNAMO_TABLE = aws_dynamodb_table.basic-dynamodb-table.name
   }
 
+  attach_policy_json = true
+  policy_json        = <<-EOT
+    {
+      "Version": "2012-10-17",
+      "Statement": [
+          {
+              "Effect": "Allow",
+              "Action": [
+                  "dynamodb:PutItem"
+              ],
+              "Resource": "${aws_dynamodb_table.basic-dynamodb-table.arn}"
+          }
+      ]
+    }
+  EOT
+
   create_current_version_allowed_triggers = false
   allowed_triggers = {
     ScanAmiRule = {
