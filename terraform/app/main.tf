@@ -1,17 +1,3 @@
-# Configure Terraform Cloud
-terraform { 
-  cloud { 
-    
-    organization = "aws-workshop-lep511" 
-
-    workspaces { 
-
-      name = "terraform-github-actions-stage" 
-
-    } 
-  } 
-}
-
 # Configure the AWS Provider
 provider "aws" {
   region = var.region
