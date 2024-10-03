@@ -88,6 +88,11 @@ module "lambda" {
 
   create_package         = false
   local_existing_package = "bootstrap.zip"
+
+  environment_variables = {
+    DYNAMO_TABLE = aws_dynamodb_table.basic-dynamodb-table.name
+  }
+
   create_current_version_allowed_triggers = false
   allowed_triggers = {
     ScanAmiRule = {
