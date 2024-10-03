@@ -99,11 +99,20 @@ module "lambda" {
       "Version": "2012-10-17",
       "Statement": [
           {
-              "Effect": "Allow",
-              "Action": [
-                  "dynamodb:PutItem"
-              ],
-              "Resource": "${aws_dynamodb_table.basic-dynamodb-table.arn}"
+            "Sid": "DynamoDBPutItem",
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:PutItem"
+            ],
+            "Resource": "${aws_dynamodb_table.basic-dynamodb-table.arn}"
+          },
+          {
+            "Sid": SQSManage",
+            "Effect": "Allow",
+            "Action": [
+                "sqs:*"
+            ],
+            "Resource": "${aws_sqs_queue.queue.arn}"
           }
       ]
     }
