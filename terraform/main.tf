@@ -99,7 +99,6 @@ module "lambda" {
       "Version": "2012-10-17",
       "Statement": [
           {
-            "Sid": "DynamoDBPutItem",
             "Effect": "Allow",
             "Action": [
                 "dynamodb:PutItem"
@@ -107,7 +106,6 @@ module "lambda" {
             "Resource": "${aws_dynamodb_table.basic-dynamodb-table.arn}"
           },
           {
-            "Sid": SQSManage",
             "Effect": "Allow",
             "Action": [
                 "sqs:*"
