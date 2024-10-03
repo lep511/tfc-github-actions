@@ -81,32 +81,16 @@ jobs:
           terraform_version: 1.9.6
           cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
 
-      - name: Pre-build App - Terraform Init
+      - name: Pre-build App - Terraform
         if: contains(github.event.head_commit.message, 'first_deploy')
         run: |
           cp ../cloud.tf cloud.tf
           cp ../variables.tf variables.tf  
           terraform init -upgrade
-        working-directory: terraform/app
-      
-      - name: Pre-build App  - Terraform Plan
-        if: contains(github.event.head_commit.message, 'first_deploy')
-        run: |
-          ls
-          cp ../cloud.tf cloud.tf
-          cp ../variables.tf variables.tf
           terraform plan -input=false -no-color
-        working-directory: terraform/app
-        continue-on-error: true
-
-      - name: Pre-build App  - Terraform Apply
-        if: contains(github.event.head_commit.message, 'first_deploy')
-        run: |
-          cp ../cloud.tf cloud.tf
-          cp ../variables.tf variables.tf
           terraform apply -auto-approve -input=false -compact-warnings -no-color
         working-directory: terraform/app
-      
+          
       - name: Terraform Init
         run: terraform init -upgrade
         working-directory: terraform

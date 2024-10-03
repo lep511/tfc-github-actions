@@ -1,6 +1,6 @@
 # Configure the AWS Provider
 provider "aws" {
-  region = var.region
+  region = var.aws_region
   default_tags {
     tags = {
       environment     = var.environment
@@ -19,7 +19,7 @@ provider "aws" {
 # Create application using aliased 'application' provider
 provider "aws" {
   alias = "application"
-  region = var.region
+  region = var.aws_region
 }
 
 # Register new application
