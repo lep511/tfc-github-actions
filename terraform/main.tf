@@ -1,18 +1,6 @@
-# Configure Terraform Cloud
-terraform { 
-  cloud { 
-    
-    organization = "aws-workshop-lep511" 
-
-    workspaces { 
-      name = "terraform-github-actions-dev" 
-    } 
-  } 
-}
-
 # Configure the AWS Provider
 provider "aws" {
-  region = var.region
+  region = var.aws_region
   default_tags {
     tags = {
       environment     = var.environment
@@ -31,7 +19,7 @@ provider "aws" {
 # Create application using aliased 'application' provider
 provider "aws" {
   alias = "application"
-  region = var.region
+  region = var.aws_region
 }
 
 # Register new application
@@ -100,11 +88,32 @@ module "lambda" {
 
   create_package         = false
   local_existing_package = "bootstrap.zip"
+
+  environment_variables = {
+    DYNAMO_TABLE = aws_dynamodb_table.basic-dynamodb-table.name
+  }
+
+  attach_policy_json = true
+  policy_json        = <<-EOT
+    {
+      "Version": "2012-10-17",
+      "Statement": [
+          {
+              "Effect": "Allow",
+              "Action": [
+                  "dynamodb:PutItem"
+              ],
+              "Resource": "${aws_dynamodb_table.basic-dynamodb-table.arn}"
+          }
+      ]
+    }
+  EOT
+
   create_current_version_allowed_triggers = false
   allowed_triggers = {
     ScanAmiRule = {
-      principal  = "events.amazonaws.com"
-      source_arn = module.eventbridge.eventbridge_rule_arns["orders_create"]
+      principal  = "sqs.amazonaws.com"
+      source_arn = aws_sqs_queue.queue.arn
     }
   }
 }
@@ -206,6 +215,13 @@ resource "aws_sqs_queue" "dlq" {
 
 resource "aws_sqs_queue" "queue" {
   name = "${var.environment}-orderqueue"
+}
+
+resource "aws_lambda_event_source_mapping" "event_source_mapping" {
+  batch_size        = 10
+  event_source_arn  = "${aws_sqs_queue.queue.arn}"
+  enabled           = true
+  function_name     = module.lambda.lambda_function_arn
 }
 
 resource "aws_sqs_queue_policy" "queue" {
