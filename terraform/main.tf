@@ -112,8 +112,8 @@ module "lambda" {
   create_current_version_allowed_triggers = false
   allowed_triggers = {
     ScanAmiRule = {
-      principal  = "events.amazonaws.com"
-      source_arn = module.eventbridge.eventbridge_rule_arns["orders_create"]
+      principal  = "sqs.amazonaws.com"
+      source_arn = aws_sqs_queue.queue.arn
     }
   }
 }
@@ -215,6 +215,13 @@ resource "aws_sqs_queue" "dlq" {
 
 resource "aws_sqs_queue" "queue" {
   name = "${var.environment}-orderqueue"
+}
+
+resource "aws_lambda_event_source_mapping" "event_source_mapping" {
+  batch_size        = 10
+  event_source_arn  = "${aws_sqs_queue.queue.arn}"
+  enabled           = true
+  function_name     = module.lambda.lambda_function_arn
 }
 
 resource "aws_sqs_queue_policy" "queue" {
