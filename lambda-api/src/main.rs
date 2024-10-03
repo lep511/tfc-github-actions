@@ -1,6 +1,6 @@
 use std::env;
 use tracing_subscriber::filter::{EnvFilter, LevelFilter};
-use serde_json::{json, Value};
+// use serde_json::{json, Value};
 use lambda_runtime::{run, service_fn, Error, LambdaEvent};
 use aws_sdk_dynamodb::types::AttributeValue;
 use aws_config::BehaviorVersion;
@@ -60,6 +60,16 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<SqsBatchRespon
 
     // tracing::info!("Received event: {:?}", event_detail);
 
+    let item = Item {
+        source_order: "testuser".into(),
+        source_item: "Brown".into(),
+        sku: "odata-27".into(),
+    };
+
+    let resp = add_item(&client, item, &table_name.to_string()).await;
+
+    println!("Response: {:?}", resp);
+
     for record in event.payload.records {
         match process_record(&record).await {
             Ok(_) => (),
@@ -72,18 +82,6 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<SqsBatchRespon
     Ok(SqsBatchResponse {
         batch_item_failures,
     })
-
-    let item = Item {
-        source_order: "testuser".into(),
-        source_item: "Brown".into(),
-        sku: "odata-27".into(),
-    };
-
-    let resp = add_item(&client, item, &table_name.to_string()).await;
-
-    println!("Response: {:?}", resp);
-
-    Ok(json!({ "message": format!("Hello world!") }))
 }
 
 #[tokio::main]
