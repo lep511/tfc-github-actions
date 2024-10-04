@@ -6,8 +6,6 @@ name: CI
 on:
   # Triggers the workflow on push or pull request events but only for the "main" branch
   push:
-    branches: [ "dev", "stage", "prod"]
-  pull_request:
     branches: [ "dev", "stage", "prod" ]
     paths-ignore:
       - "**/README.md"
@@ -82,23 +80,17 @@ jobs:
         with:
           terraform_version: 1.9.6
           cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
-            
-      - name: Pre-build App - Terraform Init
-        if: contains(github.event.head_commit.message, 'first_deploy')
-        run: terraform init -upgrade
-        working-directory: terraform/app
-      
-      - name: Pre-build App  - Terraform Plan
-        if: contains(github.event.head_commit.message, 'first_deploy')
-        run: terraform plan -input=false -no-color
-        working-directory: terraform/app
-        continue-on-error: true
 
-      - name: Pre-build App  - Terraform Apply
+      - name: Pre-build App - Terraform
         if: contains(github.event.head_commit.message, 'first_deploy')
-        run: terraform apply -auto-approve -input=false -compact-warnings -no-color
+        run: |
+          cp ../cloud.tf cloud.tf
+          cp ../variables.tf variables.tf  
+          terraform init -upgrade
+          terraform plan -input=false -no-color
+          terraform apply -auto-approve -input=false -compact-warnings -no-color
         working-directory: terraform/app
-      
+          
       - name: Terraform Init
         run: terraform init -upgrade
         working-directory: terraform
