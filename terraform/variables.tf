@@ -2,13 +2,13 @@
 variable "application_name" {
   type        = string
   description = "The name of the application"
-  default     = "TerraformApp-dev"
+  default     = "TerraformApp-stage"
 }
 
 variable "environment" {
   type        = string
   description = "The name of the environment"
-  default     = "dev"
+  default     = "stage"
 }
 
 variable "aws_region" {
