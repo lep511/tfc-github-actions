@@ -1,3 +1,5 @@
+#![allow(non_snake_case)]
+
 use std::env;
 use tracing_subscriber::filter::{EnvFilter, LevelFilter};
 // use serde_json::{json, Value};
@@ -8,39 +10,113 @@ use aws_lambda_events::{
     event::sqs::{SqsBatchResponse, SqsEvent},
     sqs::{BatchItemFailure, SqsMessage},
 };
-use aws_sdk_dynamodb::{
-    Client, 
-    Error as DynamoError
-};
+use aws_sdk_dynamodb::{Client};
+use serde::{Deserialize};
+use serde_json;
 
-pub struct Item {
-    pub source_order: String,
-    pub source_item: String,
-    pub sku: String,
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all="camelCase")]
+pub struct Event {
+    pub id: String,
+    #[serde(rename = "detail-type")]
+    pub detail_type: String,
+    pub detail: Detail,
 }
 
-pub async fn add_item(client: &Client, item: Item, table: &String) -> Result<(), DynamoError> {
-    let s_order = AttributeValue::S(item.source_order);
-    let s_item = AttributeValue::S(item.source_item);
-    let s_sku = AttributeValue::S(item.sku);
+#[derive(Deserialize, Debug)]
+#[serde(rename_all="camelCase")]
+pub struct Detail {
+    pub data: Data,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all="camelCase")]
+pub struct Data {
+    pub orderData: OrderData,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all="camelCase")]
+pub struct OrderData {
+    pub sourceOrderId: String,
+    pub items: Vec<Item>,
+    pub shipments: Vec<Shipment>,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all="camelCase")]
+pub struct Component {
+    pub code: String,
+    pub fetch: bool,
+    pub path: String,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all="camelCase")]
+pub struct Item {
+    pub sku: String,
+    pub sourceItemId: String,
+    pub components: Vec<Component>,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all="camelCase")]
+pub struct ShipTo {
+    pub name: String,
+    pub companyName: Option<String>,
+    pub address1: String,
+    pub town: String,
+    pub postcode: String,
+    pub isoCountry: String,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all="camelCase")]
+pub struct Carrier {
+    pub code: String,
+    pub service: String,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all="camelCase")]
+pub struct Shipment {
+    pub shipTo: ShipTo,
+    pub carrier: Carrier,
+}
+
+async fn process_record(message: &SqsMessage) -> Result<(), Error> {
+    let mm = message.body.as_ref().unwrap();
+    let event: Event = serde_json::from_str(&mm)?;
+    let table_name =  env::var("DYNAMO_TABLE").expect("DYNAMO_TABLE must be set");
+    let config = aws_config::load_defaults(BehaviorVersion::v2024_03_28()).await;
+    let client = Client::new(&config);
+
+    let event_id = event.id.clone();
+    let detail_type = event.detail_type.clone();
+    let source_order = event.detail.data.orderData.sourceOrderId.clone();
+    let item_id = event.detail.data.orderData.items[0].sourceItemId.clone();
+    let sku = event.detail.data.orderData.items[0].sku.clone();
+
+    let s_event_id = AttributeValue::S(event_id);
+    let s_detail_type = AttributeValue::S(detail_type);
+    let s_source_order = AttributeValue::S(source_order);
+    let s_item_id = AttributeValue::S(item_id);
+    let s_sku = AttributeValue::S(sku);
 
     let request = client
         .put_item()
-        .table_name(table)
-        .item("SourceOrderID", s_order)
-        .item("SourceItemID", s_item)
-        .item("Sku", s_sku);
-
-    // println!("Executing request [{request:?}] to add item...");
+        .table_name(table_name)
+        .item("SourceOrderID", s_source_order)
+        .item("SourceItemID", s_item_id)
+        .item("Sku", s_sku)
+        .item("EventId", s_event_id)
+        .item("DetailType", s_detail_type);
 
     let _resp = request.send().await?;
 
     Ok(())
-}
 
-async fn process_record(message: &SqsMessage) -> Result<(), Error> {
-    println!("Process record: {:?}", message);
-    Err(Error::from("Error processing message"))
 }
 
 /// This is the main body for the function.
@@ -49,26 +125,12 @@ async fn process_record(message: &SqsMessage) -> Result<(), Error> {
 /// - https://github.com/awslabs/aws-lambda-rust-runtime/tree/main/examples
 /// - https://github.com/aws-samples/serverless-rust-demo/
 async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<SqsBatchResponse, Error> {
-    let table_name =  env::var("DYNAMO_TABLE").expect("DYNAMO_TABLE must be set");
+    
     let mut batch_item_failures = Vec::new();
 
     //let _detail_type = event.payload.detail_type;
     //let _event_detail = event.payload.detail;
-    
-    let config = aws_config::load_defaults(BehaviorVersion::v2024_03_28()).await;
-    let client = aws_sdk_dynamodb::Client::new(&config);
-
     // tracing::info!("Received event: {:?}", event_detail);
-
-    let item = Item {
-        source_order: "testuser".into(),
-        source_item: "Brown".into(),
-        sku: "odata-27".into(),
-    };
-
-    let resp = add_item(&client, item, &table_name.to_string()).await;
-
-    println!("Response: {:?}", resp);
 
     for record in event.payload.records {
         match process_record(&record).await {
