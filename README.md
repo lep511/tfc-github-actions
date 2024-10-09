@@ -3,7 +3,7 @@
 ![build](https://img.shields.io/github/actions/workflow/status/mjovanc/rust-aws-lambda/ci.yml?branch=master)
 [![rust-aws-lambda: rustc 1.75+](https://img.shields.io/badge/compiler-rustc_1.75+-lightgray.svg)](https://blog.rust-lang.org/2023/11/16/Rust-1.74.0.html)
 
-#### **Author: [Marcus Cvjeticanin](https://github.com/mjovanc)**
+#### **Environment: DEV**
 
 This project is intended to demonstrate how to build a simple HTTP function in Rust and provision it to AWS with AWS Lambda using Terraform.
 

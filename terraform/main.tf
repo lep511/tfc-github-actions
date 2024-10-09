@@ -1,23 +1,14 @@
-# Configure Terraform Cloud
-terraform { 
-  cloud { 
-    
-    organization = "aws-workshop-lep511" 
-
-    workspaces { 
-      name = "learn-terraform-github-actions" 
-    } 
-  } 
-}
-
 # Configure the AWS Provider
 provider "aws" {
+  region = var.aws_region
   default_tags {
     tags = {
-      environment     = "Test"
+      env             = var.environment
       owner           = "Ops"
       applicationName = var.application_name
       awsApplication  = aws_servicecatalogappregistry_application.terraform_app.application_tag.awsApplication
+      version         = var.version_app
+      service         = var.application_name
     }    
   }
   
@@ -30,6 +21,7 @@ provider "aws" {
 # Create application using aliased 'application' provider
 provider "aws" {
   alias = "application"
+  region = var.aws_region
 }
 
 # Register new application
@@ -44,9 +36,15 @@ resource "aws_servicecatalogappregistry_application" "terraform_app" {
 module "eventbridge" {
   source = "terraform-aws-modules/eventbridge/aws"
 
-  bus_name = "${random_pet.this.id}-bus"
+  bus_name = "${var.environment}-order-bus"
 
   attach_sqs_policy = true
+  attach_lambda_policy = true
+
+  lambda_target_arns   = [
+    module.lambda.lambda_function_arn
+  ]
+
   sqs_target_arns = [
     aws_sqs_queue.queue.arn,
     aws_sqs_queue.dlq.arn
@@ -56,7 +54,7 @@ module "eventbridge" {
     orders_create = {
       description = "Capture all created orders",
       event_pattern = jsonencode({
-        "detail-type" : ["Order Create"],
+        "detail-type" : ["orderCreate"],
         "source" : ["api.gateway.orders.create"]
       })
     }
@@ -69,26 +67,98 @@ module "eventbridge" {
         arn             = aws_sqs_queue.queue.arn
         dead_letter_arn = aws_sqs_queue.dlq.arn
         target_id       = "send-orders-to-sqs"
+      },
+      {
+        name            = "send-orders-to-lambda"
+        arn             = module.lambda.lambda_function_arn
+        target_id       = "send-orders-to-lambda"
       }
     ]
   }
 }
+##################
+# Lambda [Rust]
+##################
+module "lambda" {
+  source = "terraform-aws-modules/lambda/aws"
 
+  function_name = "${var.environment}-rust-aws-lambda"
+  description   = "Create an AWS Lambda in Rust with Terraform"
+  runtime       = "provided.al2023"
+  architectures = ["x86_64"]
+  handler       = "bootstrap"
+
+  create_package         = false
+  local_existing_package = "bootstrap.zip"
+
+  environment_variables = {
+    DYNAMO_TABLE = aws_dynamodb_table.basic-dynamodb-table.name
+  }
+
+  attach_policy_json = true
+  policy_json        = <<-EOT
+    {
+      "Version": "2012-10-17",
+      "Statement": [
+          {
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:PutItem"
+            ],
+            "Resource": "${aws_dynamodb_table.basic-dynamodb-table.arn}"
+          },
+          {
+            "Effect": "Allow",
+            "Action": [
+                "sqs:*"
+            ],
+            "Resource": "${aws_sqs_queue.queue.arn}"
+          }
+      ]
+    }
+  EOT
+
+  create_current_version_allowed_triggers = false
+  allowed_triggers = {
+    ScanAmiRule = {
+      principal  = "sqs.amazonaws.com"
+      source_arn = aws_sqs_queue.queue.arn
+    }
+  }
+}
+
+##################
+# DynamoDB Table
+##################
+resource "aws_dynamodb_table" "basic-dynamodb-table" {
+  name           = "${var.environment}-order-table"
+  billing_mode   = "PROVISIONED"
+  read_capacity  = 10
+  write_capacity = 10
+  hash_key       = "SourceOrderID"
+  range_key      = "SourceItemID"
+
+  attribute {
+    name = "SourceOrderID"
+    type = "S"
+  }
+
+  attribute {
+    name = "SourceItemID"
+    type = "S"
+  }
+}
 
 ##################
 # Extra resources
 ##################
 
-resource "random_pet" "this" {
-  length = 2
-}
-
 module "api_gateway" {
   source  = "terraform-aws-modules/apigateway-v2/aws"
   version = "~> 4.0"
 
-  name          = "${random_pet.this.id}-http"
-  description   = "My ${random_pet.this.id} HTTP API Gateway"
+  name          = "${var.environment}-http-api"
+  description   = "My HTTP API Gateway"
   protocol_type = "HTTP"
 
   create_api_domain_name = false
@@ -102,7 +172,7 @@ module "api_gateway" {
       request_parameters = jsonencode({
         EventBusName = module.eventbridge.eventbridge_bus_name,
         Source       = "api.gateway.orders.create",
-        DetailType   = "Order Create",
+        DetailType   = "orderCreate",
         Detail       = "$request.body",
         Time         = "$context.requestTimeEpoch"
       })
@@ -118,7 +188,7 @@ module "apigateway_put_events_to_eventbridge_role" {
 
   create_role = true
 
-  role_name         = "apigateway-put-events-to-eventbridge"
+  role_name         = "${var.environment}-apigateway-put-events-to-eventbridge"
   role_requires_mfa = false
 
   trusted_role_services = ["apigateway.amazonaws.com"]
@@ -132,7 +202,7 @@ module "apigateway_put_events_to_eventbridge_policy" {
   source  = "terraform-aws-modules/iam/aws//modules/iam-policy"
   version = "~> 4.0"
 
-  name        = "apigateway-put-events-to-eventbridge"
+  name        = "${var.environment}-apigateway-put-events-to-eventbridge"
   description = "Allow PutEvents to EventBridge"
 
   policy = data.aws_iam_policy_document.apigateway_put_events_to_eventbridge_policy.json
@@ -149,11 +219,18 @@ data "aws_iam_policy_document" "apigateway_put_events_to_eventbridge_policy" {
 }
 
 resource "aws_sqs_queue" "dlq" {
-  name = "${random_pet.this.id}-dlq"
+  name = "${var.environment}-orderqueue-dlq"
 }
 
 resource "aws_sqs_queue" "queue" {
-  name = random_pet.this.id
+  name = "${var.environment}-orderqueue"
+}
+
+resource "aws_lambda_event_source_mapping" "event_source_mapping" {
+  batch_size        = 10
+  event_source_arn  = "${aws_sqs_queue.queue.arn}"
+  enabled           = true
+  function_name     = module.lambda.lambda_function_arn
 }
 
 resource "aws_sqs_queue_policy" "queue" {

@@ -2,14 +2,25 @@
 variable "application_name" {
   type        = string
   description = "The name of the application"
-  default     = "TerraformApp"
+  default     = "TerraformApp-stage"
 }
 
-# DynamoDB Table Name
-variable "dynamo_table_name" {
+variable "environment" {
   type        = string
-  description = "DynamoDB Table Name"
-  default = "GameScores"
+  description = "The name of the environment"
+  default     = "stage"
+}
+
+variable "version_app" {
+  type        = string
+  description = "The version of the application"
+  default     = "0.1.0"
+}
+
+variable "aws_region" {
+  type        = string
+  description = "The AWS region to deploy the application"
+  default     = "us-east-1"
 }
 
 variable "load_example_data" {
