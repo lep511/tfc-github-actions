@@ -3,10 +3,12 @@ provider "aws" {
   region = var.aws_region
   default_tags {
     tags = {
-      environment     = var.environment
+      env             = var.environment
       owner           = "Ops"
       applicationName = var.application_name
       awsApplication  = aws_servicecatalogappregistry_application.terraform_app.application_tag.awsApplication
+      version         = var.version
+      service         = var.application_name
     }    
   }
   
