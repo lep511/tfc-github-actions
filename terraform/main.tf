@@ -7,7 +7,7 @@ provider "aws" {
       owner           = "Ops"
       applicationName = var.application_name
       awsApplication  = aws_servicecatalogappregistry_application.terraform_app.application_tag.awsApplication
-      version         = var.version
+      version         = var.version_app
       service         = var.application_name
     }    
   }

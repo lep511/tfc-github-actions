@@ -11,7 +11,7 @@ variable "environment" {
   default     = "stage"
 }
 
-variable "version" {
+variable "version_app" {
   type        = string
   description = "The version of the application"
   default     = "0.1.0"
