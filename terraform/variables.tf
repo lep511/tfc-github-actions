@@ -2,13 +2,13 @@
 variable "application_name" {
   type        = string
   description = "The name of the application"
-  default     = "TerraformApp-stage"
+  default     = "TerraformApp-prod"
 }
 
 variable "environment" {
   type        = string
   description = "The name of the environment"
-  default     = "stage"
+  default     = "prod"
 }
 
 variable "version_app" {
