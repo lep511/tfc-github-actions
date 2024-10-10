@@ -1,164 +1,112 @@
-#![allow(non_snake_case)]
+use lambda_http::{run, service_fn, tracing, Body, Error, Request, RequestExt, Response};
 
-use std::env;
-use tracing_subscriber::filter::{EnvFilter, LevelFilter};
-// use serde_json::{json, Value};
-use lambda_runtime::{run, service_fn, Error, LambdaEvent};
-use aws_sdk_dynamodb::types::AttributeValue;
 use aws_config::BehaviorVersion;
-use aws_lambda_events::{
-    event::sqs::{SqsBatchResponse, SqsEvent},
-    sqs::{BatchItemFailure, SqsMessage},
+use aws_sdk_bedrockruntime::{
+    operation::converse::{ConverseError, ConverseOutput},
+    types::{ContentBlock, ConversationRole, Message},
+    Client,
 };
-use aws_sdk_dynamodb::{Client};
-use serde::{Deserialize};
-use serde_json;
 
+// Set the model ID, e.g., Claude 3 Haiku.
+const MODEL_ID: &str = "amazon.titan-text-premier-v1:0";
+const CLAUDE_REGION: &str = "us-east-1";
 
-#[derive(Deserialize, Debug)]
-#[serde(rename_all="camelCase")]
-pub struct Event {
-    pub id: String,
-    #[serde(rename = "detail-type")]
-    pub detail_type: String,
-    pub detail: Detail,
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all="camelCase")]
-pub struct Detail {
-    pub data: Data,
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all="camelCase")]
-pub struct Data {
-    pub orderData: OrderData,
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all="camelCase")]
-pub struct OrderData {
-    pub sourceOrderId: String,
-    pub items: Vec<Item>,
-    pub shipments: Vec<Shipment>,
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all="camelCase")]
-pub struct Component {
-    pub code: String,
-    pub fetch: bool,
-    pub path: String,
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all="camelCase")]
-pub struct Item {
-    pub sku: String,
-    pub sourceItemId: String,
-    pub components: Vec<Component>,
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all="camelCase")]
-pub struct ShipTo {
-    pub name: String,
-    pub companyName: Option<String>,
-    pub address1: String,
-    pub town: String,
-    pub postcode: String,
-    pub isoCountry: String,
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all="camelCase")]
-pub struct Carrier {
-    pub code: String,
-    pub service: String,
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all="camelCase")]
-pub struct Shipment {
-    pub shipTo: ShipTo,
-    pub carrier: Carrier,
-}
-
-async fn process_record(message: &SqsMessage) -> Result<(), Error> {
-    let mm = message.body.as_ref().unwrap();
-    let event: Event = serde_json::from_str(&mm)?;
-    let table_name =  env::var("DYNAMO_TABLE").expect("DYNAMO_TABLE must be set");
-    let config = aws_config::load_defaults(BehaviorVersion::v2024_03_28()).await;
-    let client = Client::new(&config);
-
-    let event_id = event.id.clone();
-    let detail_type = event.detail_type.clone();
-    let source_order = event.detail.data.orderData.sourceOrderId.clone();
-    let item_id = event.detail.data.orderData.items[0].sourceItemId.clone();
-    let sku = event.detail.data.orderData.items[0].sku.clone();
-
-    let s_event_id = AttributeValue::S(event_id);
-    let s_detail_type = AttributeValue::S(detail_type);
-    let s_source_order = AttributeValue::S(source_order);
-    let s_item_id = AttributeValue::S(item_id);
-    let s_sku = AttributeValue::S(sku);
-
-    let request = client
-        .put_item()
-        .table_name(table_name)
-        .item("SourceOrderID", s_source_order)
-        .item("SourceItemID", s_item_id)
-        .item("Sku", s_sku)
-        .item("EventId", s_event_id)
-        .item("DetailType", s_detail_type);
-
-    let _resp = request.send().await?;
-
-    Ok(())
-
-}
-
-/// This is the main body for the function.
-/// Write your code inside it.
-/// There are some code example in the following URLs:
-/// - https://github.com/awslabs/aws-lambda-rust-runtime/tree/main/examples
-/// - https://github.com/aws-samples/serverless-rust-demo/
-async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<SqsBatchResponse, Error> {
-    
-    let mut batch_item_failures = Vec::new();
-
-    //let _detail_type = event.payload.detail_type;
-    //let _event_detail = event.payload.detail;
-    // tracing::info!("Received event: {:?}", event_detail);
-
-    for record in event.payload.records {
-        match process_record(&record).await {
-            Ok(_) => (),
-            Err(_) => batch_item_failures.push(BatchItemFailure {
-                item_identifier: record.message_id.unwrap(),
-            }),
-        }
+#[derive(Debug)]
+struct BedrockConverseError(String);
+impl std::fmt::Display for BedrockConverseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Can't invoke '{}'. Reason: {}", MODEL_ID, self.0)
     }
+}
+impl std::error::Error for BedrockConverseError {}
+impl From<&str> for BedrockConverseError {
+    fn from(value: &str) -> Self {
+        BedrockConverseError(value.to_string())
+    }
+}
+impl From<&ConverseError> for BedrockConverseError {
+    fn from(value: &ConverseError) -> Self {
+        BedrockConverseError::from(match value {
+            ConverseError::ModelTimeoutException(_) => "Model took too long",
+            ConverseError::ModelNotReadyException(_) => "Model is not ready",
+            _ => "Unknown",
+        })
+    }
+}
 
-    Ok(SqsBatchResponse {
-        batch_item_failures,
-    })
+fn get_converse_output_text(output: ConverseOutput) -> Result<String, BedrockConverseError> {
+    let text = output
+        .output()
+        .ok_or("no output")?
+        .as_message()
+        .map_err(|_| "output not a message")?
+        .content()
+        .first()
+        .ok_or("no content in message")?
+        .as_text()
+        .map_err(|_| "content is not text")?
+        .to_string();
+    Ok(text)
+}
+
+async fn call_bedrock(user_message: &str) -> Result<String, BedrockConverseError> {
+    let sdk_config = aws_config::defaults(BehaviorVersion::latest())
+        .region(CLAUDE_REGION)
+        .load()
+        .await;
+    let client = Client::new(&sdk_config);
+
+    let response = client
+        .converse()
+        .model_id(MODEL_ID)
+        .messages(
+            Message::builder()
+                .role(ConversationRole::User)
+                .content(ContentBlock::Text(user_message.to_string()))
+                .build()
+                .map_err(|_| "failed to build message")?,
+        )
+        .send()
+        .await;
+
+    match response {
+        Ok(output) => {
+            let text = get_converse_output_text(output)?;
+            println!("{}", &text);
+            Ok(text)
+        }
+        Err(e) => Err(e
+            .as_service_error()
+            .map(BedrockConverseError::from)
+            .unwrap_or_else(|| BedrockConverseError("Unknown service error".into()))),
+    }
+}
+
+async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
+    // Extract some useful information from the request
+    let who = event
+        .query_string_parameters_ref()
+        .and_then(|params| params.first("prompt"))
+        .unwrap_or("Response: Not prompt");
+    let message = format!("{who}");
+
+    let msg = match call_bedrock(&message).await {
+        Ok(message) => message,
+        Err(_) => "Error calling bedrock".to_string(),
+    };
+
+    let resp_text = format!("{:?}" ,msg);
+    let resp = Response::builder()
+        .status(200)
+        .header("content-type", "text/html")
+        .body(resp_text.into())
+        .map_err(Box::new)?;
+    Ok(resp)
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            EnvFilter::builder()
-                .with_default_directive(LevelFilter::INFO.into())
-                .from_env_lossy(),
-        )
-        // disable printing the name of the module in every log line.
-        .with_target(false)
-        // disabling time is handy because CloudWatch will add the ingestion time.
-        .without_time()
-        .init();
+    tracing::init_default_subscriber();
 
     run(service_fn(function_handler)).await
 }
